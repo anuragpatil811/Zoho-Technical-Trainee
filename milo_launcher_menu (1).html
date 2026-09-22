@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milo Jewels - Chat Launcher Menu</title>
+<!--
+  MILO JEWELS - CUSTOM LAUNCHER MENU
+  ===================================
+  Replicates the client-approved design:
+  5 white action buttons over a dimmed page + circular lavender close button.
+
+  HOW TO INTEGRATE (for the web developer):
+  1. Add the <style> block and the <div id="mj-launcher-menu"> block
+     (everything between the BEGIN/END comments) to the website, e.g. in
+     the site footer so it appears on every page.
+  2. Replace the placeholder WhatsApp number (search for YOUR_WHATSAPP_NUMBER)
+     with the business WhatsApp number in international format, e.g. 919820133388.
+  3. In Zoho SalesIQ: Settings > Brands (Milo Jewels) > Website >
+     Personalization > Launcher > set "Launcher type" to CUSTOM.
+     SalesIQ will then hide its own bubble and show you the custom launcher
+     JavaScript API docs. Use that documented API call inside the
+     openSalesIQChat() function below to open the SalesIQ messenger when
+     "Talk to our Experts" is tapped.
+  4. Trigger: call mjOpenMenu() from your own launcher button, or use the
+     demo launcher pill included at the bottom of this file.
+-->
+<style>
+  /* ===== Milo Jewels launcher menu ===== */
+  #mj-overlay {
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(30, 27, 38, 0.72);          /* dark grey semi-transparent overlay */
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: none;
+    align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .25s ease;
+  }
+  #mj-overlay.mj-visible { display: flex; opacity: 1; }
+
+  #mj-menu {
+    display: flex; flex-direction: column; gap: 14px;
+    width: min(320px, 86vw);
+  }
+
+  .mj-btn {
+    display: flex; align-items: center; gap: 14px;
+    background: #FFFFFF;                          /* white pill buttons */
+    border: none; border-radius: 28px;
+    padding: 16px 22px;
+    width: 100%;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    transition: transform .15s ease, box-shadow .15s ease;
+    text-decoration: none;
+  }
+  .mj-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.32); }
+  .mj-btn svg { flex-shrink: 0; }
+
+  .mj-pink   { color: #E91E63; }   /* Talk to our Experts / Find The Perfect Gift */
+  .mj-navy   { color: #311B92; }   /* Live Video Call */
+  .mj-purple { color: #673AB7; }   /* Book Try At Home */
+  .mj-green  { color: #25D366; }   /* Chat on WhatsApp */
+
+  /* Circular lavender close button, bottom right */
+  #mj-close {
+    position: fixed; right: 24px; bottom: 24px; z-index: 9999;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: #B39DDB; border: none; cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  #mj-close.mj-visible { display: flex; }
+
+  /* Demo launcher pill (purple slider bubble, like the SalesIQ slider style) */
+  #mj-demo-launcher {
+    position: fixed; right: 24px; bottom: 96px; z-index: 9997;
+    background: #c7a7ff; color: #2d2440;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 14px; font-weight: 600;
+    padding: 12px 18px; border-radius: 26px; border: none;
+    cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.28);
+  }
+
+  /* Demo page backdrop only - remove when integrating */
+  .demo-page {
+    min-height: 100vh;
+    background: linear-gradient(rgba(255,255,255,.55), rgba(255,255,255,.55)),
+      repeating-linear-gradient(45deg, #f4efe9 0 24px, #ece5dc 24px 48px);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; color: #6b5b7b;
+  }
+</style>
+</head>
+<body>
+
+<!-- Demo backdrop - remove when integrating into the real site -->
+<div class="demo-page"><h2>Milo Jewels website content (demo)</h2></div>
+
+<!-- ===================== BEGIN: paste this into your site ===================== -->
+
+<!-- Launcher bubble that opens the menu -->
+<button id="mj-demo-launcher" onclick="mjOpenMenu()">Hi there! Need any help?</button>
+
+<!-- Dimmed overlay + action menu -->
+<div id="mj-overlay" onclick="if(event.target===this) mjCloseMenu()">
+  <nav id="mj-menu" aria-label="Milo Jewels chat options">
+
+    <!-- 1. Talk to our Experts (pink) -->
+    <button class="mj-btn mj-pink" onclick="openSalesIQChat()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v6h-6"/>
+        <path d="M8 12h.01M12 12h.01M16 12h.01"/>
+      </svg>
+      Talk to our Experts
+    </button>
+
+    <!-- 2. Live Video Call (dark purple/navy) -->
+    <a class="mj-btn mj-navy" href="https://milojewels.com/pages/video-consultation" target="_blank" rel="noopener">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="6" width="13" height="12" rx="2"/>
+        <path d="m15 10 6-3v10l-6-3z"/>
+      </svg>
+      Live Video Call
+    </a>
+
+    <!-- 3. Find The Perfect Gift (pink) -->
+    <a class="mj-btn mj-pink" href="https://milojewels.com/collections/gifting" target="_blank" rel="noopener">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="8" width="18" height="4" rx="1"/>
+        <path d="M12 8v13M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>
+        <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
+      </svg>
+      Find The Perfect Gift
+    </a>
+
+    <!-- 4. Book Try At Home (purple) -->
+    <a class="mj-btn mj-purple" href="https://api.whatsapp.com/send/?phone=YOUR_WHATSAPP_NUMBER&text=Hi!%20I%20would%20like%20to%20book%20a%20Try%20At%20Home%20appointment." target="_blank" rel="noopener">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <path d="M9 22V12h6v10"/>
+      </svg>
+      Book Try At Home
+    </a>
+
+    <!-- 5. Chat on WhatsApp (green) -->
+    <a class="mj-btn mj-green" href="https://api.whatsapp.com/send/?phone=YOUR_WHATSAPP_NUMBER&text=Hi%20Milo%20Jewels!%20I%20have%20a%20question." target="_blank" rel="noopener">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.04 2a9.9 9.9 0 0 0-8.4 15.1L2 22l5-1.3A9.9 9.9 0 1 0 12.04 2Zm5.8 14.1c-.25.7-1.45 1.35-2 1.4-.5.06-1.15.09-1.85-.12a16 16 0 0 1-1.7-.62c-3-1.3-4.95-4.3-5.1-4.5-.15-.2-1.2-1.6-1.2-3.05 0-1.45.75-2.15 1.02-2.45.27-.3.6-.37.8-.37h.57c.18 0 .43-.07.67.5.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.39-.45.52-.15.15-.3.31-.13.61.17.3.76 1.25 1.63 2.02 1.12.99 2.06 1.3 2.36 1.45.3.15.47.12.65-.07.17-.2.75-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.7.8 1.99.95.3.15.5.22.57.35.07.12.07.72-.18 1.42Z"/>
+      </svg>
+      Chat on WhatsApp
+    </a>
+  </nav>
+</div>
+
+<!-- Circular lavender close button -->
+<button id="mj-close" onclick="mjCloseMenu()" aria-label="Close menu">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2d2440" stroke-width="2.5" stroke-linecap="round">
+    <path d="M6 6l12 12M18 6L6 18"/>
+  </svg>
+</button>
+
+<script>
+  function mjOpenMenu() {
+    document.getElementById('mj-overlay').classList.add('mj-visible');
+    document.getElementById('mj-close').classList.add('mj-visible');
+    document.body.style.overflow = 'hidden';
+  }
+  function mjCloseMenu() {
+    document.getElementById('mj-overlay').classList.remove('mj-visible');
+    document.getElementById('mj-close').classList.remove('mj-visible');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') mjCloseMenu(); });
+
+  /* Wire this to the Zoho SalesIQ custom launcher API:
+     after you set Launcher type = Custom in SalesIQ, use the API call shown
+     in SalesIQ's custom launcher documentation here to open the messenger. */
+  function openSalesIQChat() {
+    // TODO (developer): call the SalesIQ JS API to open the chat window, e.g.
+    //   $zoho.salesiq.floatwindow.open();   <-- confirm exact method in the
+    //   docs shown on the Launcher settings page after selecting "Custom".
+    mjCloseMenu();
+    alert('Connect: Zoho SalesIQ messenger opens here (see TODO comment)');
+  }
+</script>
+<!-- ===================== END: paste this into your site ======================= -->
+
+</body>
+</html>
