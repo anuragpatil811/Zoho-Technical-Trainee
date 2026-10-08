@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milo Jewels - Chat Launcher Menu</title>
+<!--
+  MILO JEWELS - CUSTOM LAUNCHER MENU (updated per client changes)
+  ================================================================
+  Menu: 4 uniform buttons (Talk to our Experts / Live Video Call /
+  Book Try At Home / Chat on WhatsApp) over a dimmed page, plus:
+   - "Talk to our Experts" opens a window showing the expert's mobile number.
+   - "Live Video Call" opens a form: First Name, Last Name, Interested
+     Product, Mobile Number, Available Time (date + time). All mandatory.
+   - "Book Try At Home" opens a form: First Name, Last Name, Mobile Number,
+     Interested Product, Available Time (date + time), Budget. All mandatory.
+   - Form submissions are sent to the business WhatsApp number.
+
+  TO CONFIGURE (only 1 thing):
+  1. BUSINESS_WHATSAPP in the script at the bottom - the number that
+     receives form submissions (currently Milo Jewels: 919820133388).
+  (The expert's number is set to +91 98201 33388 - to change it, edit
+   EXPERT_PHONE in the same script block.)
+
+  TO INSTALL: paste everything between the BEGIN/END comments into the
+  site's global footer (just before </body>), on every page.
+-->
+<style>
+  /* ===== Overlay ===== */
+  #mj-overlay {
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(30, 27, 38, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: none;
+    align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .25s ease;
+    overflow-y: auto; padding: 24px 16px;
+  }
+  #mj-overlay.mj-visible { display: flex; opacity: 1; }
+
+  /* ===== Main menu buttons - all identical size and font ===== */
+  #mj-menu {
+    display: flex; flex-direction: column; gap: 14px;
+    width: min(320px, 86vw);
+  }
+  .mj-btn {
+    display: flex; align-items: center; gap: 14px;
+    background: #FFFFFF;
+    border: none; border-radius: 28px;
+    height: 56px;                       /* identical box size for every option */
+    padding: 0 22px;
+    width: 100%; box-sizing: border-box;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 18px; font-weight: 600;  /* identical font for every option; increased by 2px */
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    transition: transform .15s ease, box-shadow .15s ease;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .mj-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.32); }
+  .mj-btn svg { flex-shrink: 0; width: 22px; height: 22px; }
+
+  .mj-pink   { color: #E91E63; }   /* Talk to our Experts */
+  .mj-navy   { color: #311B92; }   /* Live Video Call */
+  .mj-purple { color: #673AB7; }   /* Book Try At Home */
+  .mj-green  { color: #25D366; }   /* Chat on WhatsApp */
+  .mj-teal   { color: #00897B; }   /* Chat with Us Now (opens SalesIQ chat) */
+
+  /* ===== Modals (expert number window + forms) ===== */
+  .mj-modal {
+    display: none;
+    background: #FFFFFF; border-radius: 22px;
+    width: min(380px, 92vw); box-sizing: border-box;
+    padding: 28px 24px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.4);
+    position: relative;
+  }
+  .mj-modal.mj-visible { display: block; }
+
+  .mj-modal-x {
+    position: absolute; top: 14px; right: 14px;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #673AB7; padding: 0;
+  }
+  .mj-modal-x:hover { background: #F1ECFA; }
+
+  /* Expert number window */
+  #mj-modal-expert { text-align: center; padding-top: 40px; padding-bottom: 44px; }
+  #mj-modal-expert h3 {
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 20px; font-weight: 600; color: #1d1626;
+    margin: 0 0 22px;
+  }
+  .mj-phone {
+    display: inline-flex; align-items: center; gap: 12px;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 22px; font-weight: 600; color: #673AB7;
+    text-decoration: none;
+  }
+  .mj-phone:hover { text-decoration: underline; }
+
+  /* Forms */
+  .mj-form-modal h3 {
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 19px; font-weight: 700; color: #1d1626;
+    margin: 4px 0 6px; padding-right: 28px;
+  }
+  .mj-form-modal .mj-sub {
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 13px; color: #8a8494; margin: 0 0 18px;
+  }
+  .mj-form { display: flex; flex-direction: column; gap: 12px; }
+  .mj-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mj-field label {
+    display: block;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 12px; font-weight: 600; color: #55505e;
+    margin: 0 0 5px 2px;
+  }
+  .mj-field input {
+    width: 100%; box-sizing: border-box;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 14px; color: #1d1626;
+    background: #F6F3FB;
+    border: 1px solid #E6E0F0; border-radius: 12px;
+    padding: 11px 14px; outline: none;
+  }
+  .mj-field input:focus { border-color: #B39DDB; background: #FFFFFF; }
+  .mj-phone-wrap { display: flex; align-items: stretch; }
+  .mj-phone-wrap .mj-prefix {
+    display: flex; align-items: center;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 14px; font-weight: 600; color: #1d1626;
+    background: #EFEBF8; border: 1px solid #E6E0F0; border-right: none;
+    border-radius: 12px 0 0 12px; padding: 0 12px; white-space: nowrap;
+  }
+  .mj-phone-wrap input { border-radius: 0 12px 12px 0; }
+
+  .mj-submit {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; box-sizing: border-box;
+    background: #673AB7; color: #FFFFFF;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 14px; font-weight: 700; letter-spacing: 0.4px;
+    border: none; border-radius: 14px;
+    height: 48px; cursor: pointer;
+    margin-top: 6px;
+  }
+  .mj-submit:hover { background: #5E35B1; }
+
+  .mj-error {
+    display: none;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 12px; color: #E91E63; margin: 2px 0 0 2px;
+  }
+  .mj-error.mj-visible { display: block; }
+
+  /* Thank-you state */
+  .mj-thanks {
+    display: none; text-align: center; padding: 18px 0 8px;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+  }
+  .mj-thanks.mj-visible { display: block; }
+  .mj-thanks .mj-tick {
+    width: 54px; height: 54px; border-radius: 50%;
+    background: #E8F5E9; color: #2E7D32; font-size: 26px;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+  }
+  .mj-thanks h4 { font-size: 17px; color: #1d1626; margin: 0 0 8px; }
+  .mj-thanks p { font-size: 13px; color: #8a8494; margin: 0 0 18px; }
+  .mj-thanks button {
+    background: #673AB7; color: #fff; border: none; border-radius: 12px;
+    padding: 11px 28px; font-size: 14px; font-weight: 600; cursor: pointer;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+  }
+
+  /* WhatsApp choice window (Open app / WhatsApp Web) */
+  #mj-modal-wa { text-align: center; }
+  #mj-modal-wa h3 {
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 18px; font-weight: 700; color: #111B21;
+    margin: 6px 0 16px;
+  }
+  .mj-wa-msg {
+    background: #F0F2F5; border: 1px solid #E9EDEF; border-radius: 12px;
+    padding: 12px 14px; margin: 0 0 18px;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 13px; color: #111B21; text-align: left;
+  }
+  .mj-wa-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; box-sizing: border-box; height: 48px;
+    border-radius: 999px;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 14px; font-weight: 600; text-decoration: none; margin-bottom: 10px;
+  }
+  .mj-wa-btn:hover { filter: brightness(.97); }
+  .mj-wa-open { background: #25D366; color: #FFFFFF; }
+  .mj-wa-web { background: #FFFFFF; color: #111B21; border: 1px solid #CCCCCC; }
+
+  /* Circular lavender close button, bottom right */
+  #mj-close {
+    position: fixed; right: 24px; bottom: 24px; z-index: 9999;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: #B39DDB; border: none; cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  #mj-close.mj-visible { display: flex; }
+
+  /* Demo launcher pill */
+  #mj-demo-launcher {
+    position: fixed; right: 24px; bottom: 96px; z-index: 9997;
+    background: #c7a7ff; color: #2d2440;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size: 14px; font-weight: 600;
+    padding: 12px 18px; border-radius: 26px; border: none;
+    cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.28);
+  }
+
+  /* Demo backdrop only - remove when integrating */
+  .demo-page {
+    min-height: 100vh;
+    background: linear-gradient(rgba(255,255,255,.55), rgba(255,255,255,.55)),
+      repeating-linear-gradient(45deg, #f4efe9 0 24px, #ece5dc 24px 48px);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; color: #6b5b7b;
+  }
+</style>
+</head>
+<body>
+
+<!-- Demo backdrop - remove when integrating into the real site -->
+<div class="demo-page"><h2>Milo Jewels website content (demo)</h2></div>
+
+<!-- ============ BEGIN: paste this into your site ============ -->
+
+<button id="mj-demo-launcher" onclick="mjOpenMenu()">Hi there! Need any help?</button>
+
+<div id="mj-overlay">
+
+  <!-- ===== MENU (4 options, identical size & font) ===== -->
+  <nav id="mj-menu" aria-label="Milo Jewels chat options">
+
+    <!-- 1. Talk to our Experts (pink) -->
+    <button class="mj-btn mj-pink" onclick="mjShow('mj-modal-expert')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v6h-6"/>
+        <path d="M8 12h.01M12 12h.01M16 12h.01"/>
+      </svg>
+      Talk to our Experts
+    </button>
+
+    <!-- 2. Live Video Call (dark purple) -->
+    <button class="mj-btn mj-navy" onclick="mjShow('mj-modal-video')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="6" width="13" height="12" rx="2"/>
+        <path d="m15 10 6-3v10l-6-3z"/>
+      </svg>
+      Live Video Call
+    </button>
+
+    <!-- 3. Chat with Us Now (teal - opens the Zoho SalesIQ chat) -->
+    <button class="mj-btn mj-teal" onclick="openSalesIQChat()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-9 8.4 8.5 8.5 0 0 1-3.4-.7L3 21l1.8-5.6A8.38 8.38 0 0 1 12 3.1a8.38 8.38 0 0 1 9 8.4z"/>
+      </svg>
+      Chat with Us Now
+    </button>
+
+    <!-- 4. Book Try At Home (purple) -->
+    <button class="mj-btn mj-purple" onclick="mjShow('mj-modal-home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <path d="M9 22V12h6v10"/>
+      </svg>
+      Book Try At Home
+    </button>
+
+    <!-- 5. Chat on WhatsApp (green) -->
+    <button class="mj-btn mj-green" onclick="mjShow('mj-modal-wa')">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.04 2a9.9 9.9 0 0 0-8.4 15.1L2 22l5-1.3A9.9 9.9 0 1 0 12.04 2Zm5.8 14.1c-.25.7-1.45 1.35-2 1.4-.5.06-1.15.09-1.85-.12a16 16 0 0 1-1.7-.62c-3-1.3-4.95-4.3-5.1-4.5-.15-.2-1.2-1.6-1.2-3.05 0-1.45.75-2.15 1.02-2.45.27-.3.6-.37.8-.37h.57c.18 0 .43-.07.67.5.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.39-.45.52-.15.15-.3.31-.13.61.17.3.76 1.25 1.63 2.02 1.12.99 2.06 1.3 2.36 1.45.3.15.47.12.65-.07.17-.2.75-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.7.8 1.99.95.3.15.5.22.57.35.07.12.07.72-.18 1.42Z"/>
+      </svg>
+      Chat on WhatsApp
+    </button>
+  </nav>
+
+  <!-- ===== WINDOW: Talk to our Experts (shows expert's number) ===== -->
+  <div class="mj-modal" id="mj-modal-expert">
+    <button class="mj-modal-x" onclick="mjBackToMenu()" aria-label="Back to menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+    <h3>Talk to our experts at</h3>
+    <a class="mj-phone" id="mj-expert-link" href="#">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>
+      </svg>
+      <span id="mj-expert-number">+91-XXXXX-XXXXX</span>
+    </a>
+  </div>
+
+  <!-- ===== FORM: Live Video Call ===== -->
+  <div class="mj-modal mj-form-modal" id="mj-modal-video">
+    <button class="mj-modal-x" onclick="mjBackToMenu()" aria-label="Back to menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+    <h3>See it up-close on a video call</h3>
+    <p class="mj-sub">Our experts will help you view designs from all angles.</p>
+
+    <form class="mj-form" id="mj-form-video" novalidate>
+      <div class="mj-row">
+        <div class="mj-field"><label>First Name *</label><input name="first" type="text" placeholder="First name" required></div>
+        <div class="mj-field"><label>Last Name *</label><input name="last" type="text" placeholder="Last name" required></div>
+      </div>
+      <div class="mj-field"><label>Interested Product *</label><input name="product" type="text" placeholder="e.g. Solitaire Ring" required></div>
+      <div class="mj-field">
+        <label>Mobile Number *</label>
+        <div class="mj-phone-wrap">
+          <span class="mj-prefix">IN +91</span>
+          <input name="mobile" type="tel" placeholder="Enter mobile number" pattern="[0-9]{10}" maxlength="10" inputmode="numeric" required>
+        </div>
+      </div>
+      <div class="mj-row">
+        <div class="mj-field"><label>Available Date *</label><input name="date" type="date" required></div>
+        <div class="mj-field"><label>Available Time *</label><input name="time" type="time" required></div>
+      </div>
+      <p class="mj-error" id="mj-error-video">Please fill in all fields (mobile number must be 10 digits).</p>
+      <button class="mj-submit" type="submit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="13" height="12" rx="2"/><path d="m15 10 6-3v10l-6-3z"/>
+        </svg>
+        SCHEDULE VIDEO CALL
+      </button>
+    </form>
+
+    <div class="mj-thanks" id="mj-thanks-video">
+      <div class="mj-tick">✓</div>
+      <h4>Video call requested!</h4>
+      <p>Thank you. Our jewellery expert will contact you shortly to confirm your appointment.</p>
+      <button onclick="mjCloseAll()">Close</button>
+    </div>
+  </div>
+
+  <!-- ===== FORM: Book Try At Home ===== -->
+  <div class="mj-modal mj-form-modal" id="mj-modal-home">
+    <button class="mj-modal-x" onclick="mjBackToMenu()" aria-label="Back to menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+    <h3>Book a Try At Home appointment</h3>
+    <p class="mj-sub">Experience Milo jewellery at your home, before you buy.</p>
+
+    <form class="mj-form" id="mj-form-home" novalidate>
+      <div class="mj-row">
+        <div class="mj-field"><label>First Name *</label><input name="first" type="text" placeholder="First name" required></div>
+        <div class="mj-field"><label>Last Name *</label><input name="last" type="text" placeholder="Last name" required></div>
+      </div>
+      <div class="mj-field">
+        <label>Mobile Number *</label>
+        <div class="mj-phone-wrap">
+          <span class="mj-prefix">IN +91</span>
+          <input name="mobile" type="tel" placeholder="Enter mobile number" pattern="[0-9]{10}" maxlength="10" inputmode="numeric" required>
+        </div>
+      </div>
+      <div class="mj-field"><label>Interested Product *</label><input name="product" type="text" placeholder="e.g. Diamond Mangalsutra" required></div>
+      <div class="mj-row">
+        <div class="mj-field"><label>Available Date *</label><input name="date" type="date" required></div>
+        <div class="mj-field"><label>Available Time *</label><input name="time" type="time" required></div>
+      </div>
+      <div class="mj-field"><label>Budget *</label><input name="budget" type="text" placeholder="e.g. Rs. 50,000" required></div>
+      <p class="mj-error" id="mj-error-home">Please fill in all fields (mobile number must be 10 digits).</p>
+      <button class="mj-submit" type="submit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>
+        </svg>
+        BOOK TRY AT HOME
+      </button>
+    </form>
+
+    <div class="mj-thanks" id="mj-thanks-home">
+      <div class="mj-tick">✓</div>
+      <h4>Appointment requested!</h4>
+      <p>Thank you. Our team will contact you shortly to confirm your Try At Home visit.</p>
+      <button onclick="mjCloseAll()">Close</button>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: Chat on WhatsApp (Open app / WhatsApp Web) ===== -->
+  <div class="mj-modal" id="mj-modal-wa">
+    <button class="mj-modal-x" onclick="mjBackToMenu()" aria-label="Back to menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+    <h3>Share on WhatsApp</h3>
+    <div class="mj-wa-msg" id="mj-wa-msg">Hi Milo Jewels! I have a question.</div>
+    <a class="mj-wa-btn mj-wa-open" id="mj-wa-app" href="#">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.04 2a9.9 9.9 0 0 0-8.4 15.1L2 22l5-1.3A9.9 9.9 0 1 0 12.04 2Zm5.8 14.1c-.25.7-1.45 1.35-2 1.4-.5.06-1.15.09-1.85-.12a16 16 0 0 1-1.7-.62c-3-1.3-4.95-4.3-5.1-4.5-.15-.2-1.2-1.6-1.2-3.05 0-1.45.75-2.15 1.02-2.45.27-.3.6-.37.8-.37h.57c.18 0 .43-.07.67.5.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.39-.45.52-.15.15-.3.31-.13.61.17.3.76 1.25 1.63 2.02 1.12.99 2.06 1.3 2.36 1.45.3.15.47.12.65-.07.17-.2.75-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.7.8 1.99.95.3.15.5.22.57.35.07.12.07.72-.18 1.42Z"/>
+      </svg>
+      Open app
+    </a>
+    <a class="mj-wa-btn mj-wa-web" id="mj-wa-web" href="#" target="_blank" rel="noopener">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="4" width="20" height="14" rx="2"/>
+        <path d="M2 20h20"/>
+      </svg>
+      Continue to WhatsApp Web
+    </a>
+  </div>
+</div>
+
+<!-- Circular lavender close button -->
+<button id="mj-close" onclick="mjCloseAll()" aria-label="Close menu">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2d2440" stroke-width="2.5" stroke-linecap="round">
+    <path d="M6 6l12 12M18 6L6 18"/>
+  </svg>
+</button>
+
+<script>
+  /* ================= CONFIGURATION (edit these two) ================= */
+  const EXPERT_PHONE = "+91 98201 33388";          /* expert's mobile number */
+  const BUSINESS_WHATSAPP = "919820133388";     /* <-- number that receives form submissions */
+  /* ==================================================================== */
+
+  /* Expert window + clickable call link */
+  document.getElementById('mj-expert-number').textContent = EXPERT_PHONE;
+  document.getElementById('mj-expert-link').href = 'tel:' + EXPERT_PHONE.replace(/[^0-9+]/g, '');
+
+  /* WhatsApp chat: choice window (Open app opens the app, WhatsApp Web opens browser) */
+  const WA_TEXT = 'Hi Milo Jewels! I have a question.';
+  const waEncoded = encodeURIComponent(WA_TEXT);
+  document.getElementById('mj-wa-msg').textContent = WA_TEXT;
+  document.getElementById('mj-wa-app').href =
+    'whatsapp://send/?phone=' + BUSINESS_WHATSAPP + '&text=' + waEncoded;
+  document.getElementById('mj-wa-web').href =
+    'https://web.whatsapp.com/send/?phone=' + BUSINESS_WHATSAPP + '&text=' + waEncoded;
+
+  /* Show a modal (hides the menu) */
+  function mjShow(id) {
+    document.getElementById('mj-menu').style.display = 'none';
+    document.querySelectorAll('.mj-modal').forEach(m => m.classList.remove('mj-visible'));
+    document.getElementById(id).classList.add('mj-visible');
+  }
+
+  /* Back from a modal to the menu */
+  function mjBackToMenu() {
+    document.querySelectorAll('.mj-modal').forEach(m => m.classList.remove('mj-visible'));
+    document.getElementById('mj-menu').style.display = 'flex';
+  }
+
+  function mjOpenMenu() {
+    document.getElementById('mj-overlay').classList.add('mj-visible');
+    document.getElementById('mj-close').classList.add('mj-visible');
+    document.body.style.overflow = 'hidden';
+    mjBackToMenu();
+  }
+
+  function mjCloseAll() {
+    document.getElementById('mj-overlay').classList.remove('mj-visible');
+    document.getElementById('mj-close').classList.remove('mj-visible');
+    document.body.style.overflow = '';
+    mjBackToMenu();
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') mjCloseAll(); });
+  document.getElementById('mj-overlay').addEventListener('click',
+    e => { if (e.target === document.getElementById('mj-overlay')) mjCloseAll(); });
+
+  /* "Chat with Us Now" connects to the Zoho SalesIQ chat using SalesIQ's
+     official JavaScript API (developer docs: SalesIQ JavaScript APIs,
+     .chat.start()). The widget code already on the website exposes the
+     $zoho.salesiq object. When this button is clicked:
+       1. visitor.question() sets the visitor's opening message.
+       2. chat.start() opens the chat window and starts the chat
+          (this API is designed to be called from an OnClick handler).
+     The Milo Bot (Zobot) then takes over automatically because it is
+     enabled for the brand and set to initiate when a chat starts. */
+  function openSalesIQChat() {
+    /*
+      Milo Bot is configured in SalesIQ to initiate when this exact
+      custom action is received. Zoho's visitor.customaction() API
+      should be called from the website button click.
+    */
+    try {
+      if (window.$zoho && window.$zoho.salesiq &&
+          window.$zoho.salesiq.visitor &&
+          typeof window.$zoho.salesiq.visitor.customaction === 'function') {
+        window.$zoho.salesiq.visitor.customaction("chat_with_us_now");
+        mjCloseMenuOnly();
+        return;
+      }
+    } catch (e) {
+      console.error('SalesIQ custom action failed:', e);
+    }
+
+    mjCloseMenuOnly();
+    alert('Zoho SalesIQ is not ready on this page. Test this launcher on the website page where the Milo Jewels SalesIQ widget is installed.');
+  }
+
+  /* Close just the overlay, keeping the SalesIQ messenger visible */
+  function mjCloseMenuOnly() {
+    document.getElementById('mj-overlay').classList.remove('mj-visible');
+    document.getElementById('mj-close').classList.remove('mj-visible');
+    document.body.style.overflow = '';
+    mjBackToMenu();
+  }
+
+  /* Form handling: validate (all fields mandatory), send via WhatsApp, show thank-you */
+  function mjHandleForm(formId, errId, thanksId, title) {
+    const form = document.getElementById(formId);
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const d = Object.fromEntries(new FormData(form).entries());
+      const valid = d.first && d.last && d.product && d.mobile && /^[0-9]{10}$/.test(d.mobile) && d.date && d.time &&
+        (!('budget' in d) || d.budget);
+      document.getElementById(errId).classList.toggle('mj-visible', !valid);
+      if (!valid) return;
+
+      const msg =
+        'Hi Milo Jewels! New ' + title + ' request:' +
+        '\nName: ' + d.first + ' ' + d.last +
+        '\nMobile: +91 ' + d.mobile +
+        '\nInterested in: ' + d.product +
+        '\nPreferred: ' + d.date + ' at ' + d.time +
+        ('budget' in d ? '\nBudget: ' + d.budget : '');
+
+      window.open('https://api.whatsapp.com/send/?phone=' + BUSINESS_WHATSAPP +
+        '&text=' + encodeURIComponent(msg), '_blank');
+
+      form.style.display = 'none';
+      document.getElementById(thanksId).classList.add('mj-visible');
+    });
+  }
+  mjHandleForm('mj-form-video', 'mj-error-video', 'mj-thanks-video', 'LIVE VIDEO CALL');
+  mjHandleForm('mj-form-home',  'mj-error-home',  'mj-thanks-home',  'TRY AT HOME');
+</script>
+<!-- ============ END: paste this into your site ============ -->
+<script>window.$zoho=window.$zoho || {};$zoho.salesiq=$zoho.salesiq||{ready:function(){}}</script><script id="zsiqscript" src="https://salesiq.zohopublic.in/widget?wc=siq5229457c590d9ec242081241a8cadcd86bcf1c6eb65e3ea7e9df842476b051e6" defer></script>
+</body>
+</html>
